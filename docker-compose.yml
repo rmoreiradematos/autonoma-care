@@ -1,0 +1,41 @@
+services:
+  mcp:
+    build: .
+    command: python -m mcp_server
+    environment:
+      HOSPITAL_DATABASE_URL: sqlite:////app/data/hospital.db
+      MCP_HOST: 0.0.0.0
+      MCP_PORT: 8765
+      LOG_LEVEL: INFO
+    ports:
+      - "8765:8765"
+    volumes:
+      - hospital-data:/app/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; s=socket.create_connection(('127.0.0.1', 8765), 2); s.close()"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build: .
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8091
+    environment:
+      HOSPITAL_DATABASE_URL: sqlite:////app/data/hospital.db
+      AGENT_DATABASE_URL: sqlite:////app/data/agent.db
+      MCP_SERVER_URL: http://mcp:8765/mcp
+      PLANNER_MODE: deterministic
+      LLM_API_KEY: ""
+      API_PORT: 8091
+      DEMO_MODE: "true"
+      LOG_LEVEL: INFO
+    ports:
+      - "8091:8091"
+    volumes:
+      - hospital-data:/app/data
+    depends_on:
+      mcp:
+        condition: service_healthy
+
+volumes:
+  hospital-data:

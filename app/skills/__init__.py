@@ -1,0 +1,1 @@
+"""Discoverable administrative skills."""
